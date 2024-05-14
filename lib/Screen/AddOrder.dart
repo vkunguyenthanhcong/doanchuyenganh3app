@@ -29,27 +29,20 @@ String convertToCurrencyFormat(String input) {
 }
 
 class Loai {
-  final String id;
-  final String loai;
-
-  Loai({required this.id, required this.loai});
+  Loai({required this.id, required this.tenloai});
 
   factory Loai.fromJson(Map<String, dynamic> json) {
     return Loai(
       id: json['id'],
-      loai: json['loai'],
+      tenloai: json['tenloai'],
     );
   }
-}
 
-class Product {
   final String id;
-  final String ten;
-  final String image;
-  final String gia;
-  final String loai;
-  final String soluong;
-
+  final String tenloai;
+}
+String? idban;
+class Product {
   Product(
       {required this.id,
       required this.ten,
@@ -57,30 +50,42 @@ class Product {
       required this.gia,
       required this.loai,
       required this.soluong});
+
+  final String gia;
+  final String id;
+  final String image;
+  final String loai;
+  final String soluong;
+  final String ten;
 }
 
 class _AddOrderState extends State<AddOrder> {
+  int value = 0;
+  String filterValue = '';
   List<Loai> _loaiList = [];
   List<Product> _products = [];
-  String? _tongtien;
+  List<Product> _filterproducts = [];
   String? _soluong;
-  int value = 0;
+  String? _tongtien;
+  
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
-    if (mounted) {
-      fetchLoaiList();
-      fetchProducts(0);
-    }
+    fetchLoaiList(); fetchProducts(0);
   }
 
   void setStateIfMounted(f) {
     if (mounted) setState(f);
   }
 
-  Future<void> fetchProducts(int id) async {
-    final response = await http
-        .get(Uri.parse(url + "tableorder/getDataProduct.php?type=${id}"));
+  Future<void> fetchProducts(int _loai) async {
+    final response = await http.get(Uri.parse(url + "product/products.php"));
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
       setStateIfMounted(() {
@@ -95,6 +100,11 @@ class _AddOrderState extends State<AddOrder> {
                 ))
             .toList();
       });
+      if (_loai > 0) {
+        _products = _products
+            .where((product) => product.loai == _loai.toString())
+            .toList();
+      }
     } else {
       showDialog(
         context: context,
@@ -117,11 +127,11 @@ class _AddOrderState extends State<AddOrder> {
   }
 
   Future<void> fetchLoaiList() async {
-    String jsonData = '[{"id": "0", "loai": "Tất cả"}]';
+    String jsonData = '[{"id": "0", "tenloai": "Tất cả"}]';
     List<dynamic> data = jsonDecode(jsonData);
 
-    final response = await http
-        .get(Uri.parse(url + "product/themsanpham.php?method=getTypeProduct"));
+    final response =
+        await http.get(Uri.parse(url + "product/getTypeProduct.php"));
     if (response.statusCode == 200) {
       try {
         List<dynamic> jsonResponse = jsonDecode(response.body);
@@ -139,59 +149,72 @@ class _AddOrderState extends State<AddOrder> {
   }
 
   Future<void> uploadOrder(String idban, String idmon) async {
-    var request =
-        http.MultipartRequest('POST', Uri.parse(url + "tableorder/order.php"));
-
-    request.fields['idmon'] = idmon;
-    request.fields['idban'] = idban;
-
-    var response = await request.send();
-
-    if (response.statusCode == 200) {
-      var responseData = await response.stream.bytesToString();
-print(responseData);
-      Map<String, dynamic> data = jsonDecode(responseData);
-      
-
-      setStateIfMounted(() {
-        _soluong = data['soluong'];
-        _tongtien = data['tongtien'];
+    try {
+      final response =
+          await http.post(Uri.parse(url + 'tableorder/addBill.php'), body: {
+        'idban': idban,
+        'idmon': idmon,
       });
-    } else {
-      print('Failed to upload image');
+      if (response.statusCode == 200) {
+        try {
+          Map<String, dynamic> jsonData = json.decode(response.body);
+          setStateIfMounted(() {
+            _soluong = jsonData['soluong'];
+            _tongtien = jsonData['tongtien'];
+          });
+        } on Exception {}
+      } else {
+        Navigator.pop(context);
+        QuickAlert.show(
+            context: context,
+            type: QuickAlertType.error,
+            text: "Vui lòng kiểm tra kết nối mạng");
+      }
+    } on Exception {
+      Navigator.pop(context);
+      QuickAlert.show(
+          context: context,
+          type: QuickAlertType.error,
+          text: "Vui lòng kiểm tra kết nối mạng");
     }
   }
 
-  Future<void> getMoneyTinhTrang1(String idban) async {
-    var request = http.MultipartRequest('POST',
-        Uri.parse(url + "tableorder/order.php?getMoneyTinhTrang1=${idban}"));
-
-    var response = await request.send();
-
-    if (response.statusCode == 200) {
-      var responseData = await response.stream.bytesToString();
-
-      Map<String, dynamic> data = jsonDecode(responseData);
-
-      setStateIfMounted(() {
-        _soluong = data['soluong'];
-        _tongtien = data['tongtien'];
-      });
-    } else {
-      print('Failed to upload image');
+  Future<void> getMoneyTinhTrang(String idban) async {
+    try {
+      final response =
+          await http.get(Uri.parse(url + 'tableorder/addBill.php?id=${idban}'));
+      if (response.statusCode == 200) {
+        try {
+          Map<String, dynamic> jsonData = json.decode(response.body);
+          setStateIfMounted(() {
+            _soluong = jsonData['soluong'];
+            _tongtien = jsonData['tongtien'];
+          });
+        } on Exception {}
+      } else {
+        Navigator.pop(context);
+        QuickAlert.show(
+            context: context,
+            type: QuickAlertType.error,
+            text: "Vui lòng kiểm tra kết nối mạng");
+      }
+    } on Exception {
+      Navigator.pop(context);
+      QuickAlert.show(
+          context: context,
+          type: QuickAlertType.error,
+          text: "Vui lòng kiểm tra kết nối mạng");
     }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final Map<String, dynamic> data =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    getMoneyTinhTrang1(data['idban']);
+    setStateIfMounted(() {
+      idban = data['idban'];
+  getMoneyTinhTrang(idban.toString());
+    });
     return GestureDetector(
         onTap: () {
           FocusScope.of(context).requestFocus(new FocusNode());
@@ -218,8 +241,11 @@ print(responseData);
                     child: InkWell(
                       onTap: () {
                         Navigator.pushNamed(context, '/confirmAndBillOrder',
-                            arguments: {'idban': data['idban'], 'ten' : data['ten'], 'username' : data['username']});
-                           
+                            arguments: {
+                              'idban': data['idban'],
+                              'ten': data['ten'],
+                              'username': data['username']
+                            });
                       },
                       child: Container(
                         margin: EdgeInsets.only(left: 20, right: 20),
@@ -261,7 +287,9 @@ print(responseData);
                             ),
                             Expanded(
                               child: Text(
-                                _tongtien == null ? '0 đ' : '${convertToCurrencyFormat(_tongtien.toString())} đ',
+                                _tongtien == null
+                                    ? '0 đ'
+                                    : '${convertToCurrencyFormat(_tongtien.toString())} đ',
                                 textAlign: TextAlign.right,
                                 style: TextStyle(
                                     color: Colors.white,
@@ -315,7 +343,7 @@ print(responseData);
                             int index = entry.key;
                             return ChoiceChip(
                               selectedColor: Colors.yellow,
-                              label: Text(entry.value.loai),
+                              label: Text(entry.value.tenloai),
                               selected: value == index,
                               onSelected: (selected) {
                                 setStateIfMounted(() {
@@ -356,89 +384,88 @@ print(responseData);
                           color: Colors.transparent,
                           borderRadius: BorderRadius.circular(15),
                           child: Container(
-                          margin: EdgeInsets.zero,
-                          padding: EdgeInsets.zero,
-                          decoration: BoxDecoration(
-                            color: Color(0xFFFFFFFF),
-                            borderRadius: BorderRadius.circular(15),
-                          
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(0, 0, 0, 10),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(15),
-                                  child: Image(
-                                    height: 180,
-                                    width: 200,
-                                    image: NetworkImage(url + product.image),
-                                    fit: BoxFit.cover,
+                            margin: EdgeInsets.zero,
+                            padding: EdgeInsets.zero,
+                            decoration: BoxDecoration(
+                              color: Color(0xFFFFFFFF),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(0, 0, 0, 10),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(15),
+                                    child: Image(
+                                      height: 180,
+                                      width: 200,
+                                      image: NetworkImage(url + product.image),
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Text(
-                                product.ten,
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.clip,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontStyle: FontStyle.normal,
-                                  fontSize: 14,
-                                  color: Color(0xff000000),
+                                Text(
+                                  product.ten,
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.clip,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontStyle: FontStyle.normal,
+                                    fontSize: 14,
+                                    color: Color(0xff000000),
+                                  ),
                                 ),
-                              ),
-                              new Spacer(),
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(15, 0, 10, 15),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisSize: MainAxisSize.max,
-                                  children: [
-                                    Text(
-                                      "${convertToCurrencyFormat(product.gia)} đ",
-                                      textAlign: TextAlign.start,
-                                      overflow: TextOverflow.clip,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontStyle: FontStyle.normal,
-                                        fontSize: 14,
-                                        color: Color(0xff000000),
+                                new Spacer(),
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(15, 0, 10, 15),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                      Text(
+                                        "${convertToCurrencyFormat(product.gia)} đ",
+                                        textAlign: TextAlign.start,
+                                        overflow: TextOverflow.clip,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontStyle: FontStyle.normal,
+                                          fontSize: 14,
+                                          color: Color(0xff000000),
+                                        ),
                                       ),
-                                    ),
-                                    Expanded(
-                                      flex: 1,
-                                      child: Align(
-                                          alignment: Alignment.centerRight,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                                color: Colors.yellow,
-                                                borderRadius:
-                                                    BorderRadius.circular(5)),
-                                            padding: EdgeInsets.all(2),
-                                            child: InkWell(
-                                              onTap: () {
-                                                uploadOrder(
-                                                    data['idban'], product.id);
-                                              },
-                                              child: Icon(
-                                                Icons.add,
-                                                color: Color(0xff212435),
-                                                size: 24,
+                                      Expanded(
+                                        flex: 1,
+                                        child: Align(
+                                            alignment: Alignment.centerRight,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                  color: Colors.yellow,
+                                                  borderRadius:
+                                                      BorderRadius.circular(5)),
+                                              padding: EdgeInsets.all(2),
+                                              child: InkWell(
+                                                onTap: () {
+                                                  uploadOrder(data['idban'],
+                                                      product.id);
+                                                },
+                                                child: Icon(
+                                                  Icons.add,
+                                                  color: Color(0xff212435),
+                                                  size: 24,
+                                                ),
                                               ),
-                                            ),
-                                          )),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            ],
+                                            )),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              ],
+                            ),
                           ),
-                        ),
                         )
                     ],
                   ),

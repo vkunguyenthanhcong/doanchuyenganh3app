@@ -45,7 +45,8 @@ String convertDateTime(String datetime) {
   print(datetime);
   if (datetime != null || datetime != "null") {
     DateTime dateTime = DateTime.parse(datetime);
-    String formattedDateTime = DateFormat('HH:mm:ss dd-MM-yyyy').format(dateTime);
+    String formattedDateTime =
+        DateFormat('HH:mm:ss dd-MM-yyyy').format(dateTime);
     return formattedDateTime;
   } else {
     return '';
@@ -357,34 +358,33 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
           );
   }
 
-  thanhToan(String idban, String idhoadon, String tongtien, String nhanvien) async {
-    var request =
-        http.MultipartRequest('POST', Uri.parse(url + "tableorder/order.php"));
-
-    request.fields['thanhToan'] = idban;
-    request.fields['idhoadon'] = idhoadon;
-    request.fields['tongtien'] = tongtien;
-    request.fields['giovao'] = _giovao;
-    request.fields['nhanvien'] = nhanvien;
-
-    var response = await request.send();
-
+  thanhToan(
+      String idban, String idhoadon, String tongtien, String nhanvien) async {
+    final response =
+        await http.post(Uri.parse(url + "tableorder/thanhToan.php"), body: {
+      "idban": idban,
+      "idhoadon": idhoadon,
+      "tongtien": tongtien,
+      "giovao": _giovao,
+      "nhanvien": nhanvien
+    });
     if (response.statusCode == 200) {
-      var responseData = await response.stream.bytesToString();
-      Map<String, dynamic> data = jsonDecode(responseData);
-      QuickAlert.show(
-          context: context,
-          type: QuickAlertType.success,
-          text: "Thanh Toán Thành Công");
-      initial();
+      Map<String, dynamic> data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        QuickAlert.show(
+            context: context,
+            type: QuickAlertType.success,
+            text: "Thanh Toán Thành Công");
+        initial();
+      } else {}
     } else {
       print('Thanh toán lỗi');
     }
   }
 
   fetchData(String idban) async {
-    final response = await http.get(
-        Uri.parse(url + "tableorder/order.php?getListChuaXacNhan=${idban}"));
+    final response = await http
+        .get(Uri.parse(url + "tableorder/getBill.php?idban=${idban}"));
     if (response.statusCode == 200) {
       List<dynamic> jsonResponse = jsonDecode(response.body);
       setStateIfMounted(() {
@@ -401,7 +401,7 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
 
   fetchDataDaXacNhan(String idban) async {
     final response = await http
-        .get(Uri.parse(url + "tableorder/order.php?getListDaXacNhan=${idban}"));
+        .get(Uri.parse(url + "tableorder/getBill.php?idBanDaXacNhan=${idban}"));
     if (response.statusCode == 200) {
       List<dynamic> jsonResponse = jsonDecode(response.body);
       setStateIfMounted(() {
@@ -413,8 +413,8 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
   }
 
   huyDon(String idban) async {
-    final response = await http.get(
-        Uri.parse(url + "tableorder/order.php?huyDonChuaXacNhan=${idban}"));
+    final response = await http
+        .delete(Uri.parse(url + "tableorder/getBill.php?idBanHuy=${idban}"));
     if (response.statusCode == 200) {
       var responseData = await response.body;
       Map<String, dynamic> data = jsonDecode(responseData);
@@ -427,12 +427,10 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
   }
 
   xacNhan(String idban) async {
-    final response = await http
-        .get(Uri.parse(url + "tableorder/order.php?xacNhanOrder=${idban}"));
+    final response = await http.post(Uri.parse(url + "tableorder/getBill.php"),
+        body: {"idban": idban});
     if (response.statusCode == 200) {
       var responseData = await response.body;
-      Map<String, dynamic> data = jsonDecode(responseData);
-      // Call fetchData again to refresh the data
       fetchData(_idban);
       fetchTongTien(_idban);
       fetchDataDaXacNhan(_idban);
@@ -444,12 +442,12 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
 
   Future<void> getGioVao(String idban) async {
     final response = await http.get(
-        Uri.parse(url + "tableorder/order.php?getGioVaoDaXacNhan=${idban}"));
+        Uri.parse(url + "tableorder/getBill.php?getGioVaoDaXacNhan=${idban}"));
     if (response.statusCode == 200) {
       var responseData = await response.body;
       Map<String, dynamic> data = jsonDecode(responseData);
 
-      if (data['message'] == "false" || data['message'] == false) {
+      if (data['success'] == false) {
         setStateIfMounted(() {
           _giovao = "";
           _tongTiened = "0";
@@ -458,7 +456,7 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
         setStateIfMounted(() {
           _giovao = data['time'];
           cacheGioVao = data['time'];
-          _tongTiened = data['tongtien'];
+          data['tongtien'] == null ? _tongTiened = "0" : _tongTiened = data['tongtien'];
         });
       }
     } else {
@@ -467,8 +465,8 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
   }
 
   Future<void> fetchTongTien(String idban) async {
-    final response = await http.get(Uri.parse(
-        url + "tableorder/order.php?getTongTienChuaXacNhan=${idban}"));
+    final response = await http.get(
+        Uri.parse(url + "tableorder/getBill.php?id=${idban}&&tienChuaXacNhan"));
     if (response.statusCode == 200) {
       var responseData = await response.body;
 
@@ -992,26 +990,27 @@ class DaXacNhan extends StatelessWidget {
                   children: [
                     MaterialButton(
                       onPressed: () async {
-                        if(_giovao != ""){
+                        if (_giovao != "") {
                           if (await confirm(context,
-                            title: Text('Thanh toán'),
-                            content: Text('Xác nhận thanh toán'),
-                            textOK: Text('Thanh toán'),
-                            textCancel: Text('Hủy'))) {
-                          downloadAndSaveImage(
-                            'https://img.vietqr.io/image/tpbank-0935704083-qr_only.jpg?amount=${tongtienthanhtoan}&addInfo=${idHoaDon(convertDateTime(cacheGioVao.toString()), idban)}&accountName=NGUYEN%20THANH%20CONG',
-                            context,
-                            tongtienthanhtoan,
-                            idban,
-                            getGioRa(),
-                            datas,
-                          );
-                          thanhToan(
+                              title: Text('Thanh toán'),
+                              content: Text('Xác nhận thanh toán'),
+                              textOK: Text('Thanh toán'),
+                              textCancel: Text('Hủy'))) {
+                            downloadAndSaveImage(
+                              'https://img.vietqr.io/image/tpbank-0935704083-qr_only.jpg?amount=${tongtienthanhtoan}&addInfo=${idHoaDon(convertDateTime(cacheGioVao.toString()), idban)}&accountName=NGUYEN%20THANH%20CONG',
+                              context,
+                              tongtienthanhtoan,
                               idban,
-                              idHoaDon(
-                                  convertDateTime(_giovao.toString()), idban),
-                              tongtienthanhtoan, username);
-                        }
+                              getGioRa(),
+                              datas,
+                            );
+                            thanhToan(
+                                idban,
+                                idHoaDon(
+                                    convertDateTime(_giovao.toString()), idban),
+                                tongtienthanhtoan,
+                                username);
+                          }
                         }
                       },
                       color: Color(0xFF0059b3),
@@ -1039,16 +1038,15 @@ class DaXacNhan extends StatelessWidget {
                     ),
                     MaterialButton(
                       onPressed: () {
-                        if(_giovao == ""){
-                          
-                        }else{
+                        if (_giovao == "") {
+                        } else {
                           downloadAndSaveImage(
-                            'https://img.vietqr.io/image/tpbank-0935704083-qr_only.jpg?amount=${tongtienthanhtoan}&addInfo=${idHoaDon(convertDateTime(_giovao.toString()), idban)}&accountName=NGUYEN%20THANH%20CONG',
-                            context,
-                            tongtienthanhtoan,
-                            idban,
-                            "",
-                            datas);
+                              'https://img.vietqr.io/image/tpbank-0935704083-qr_only.jpg?amount=${tongtienthanhtoan}&addInfo=${idHoaDon(convertDateTime(_giovao.toString()), idban)}&accountName=NGUYEN%20THANH%20CONG',
+                              context,
+                              tongtienthanhtoan,
+                              idban,
+                              "",
+                              datas);
                         }
                       },
                       color: Color(0xFF0059b3),

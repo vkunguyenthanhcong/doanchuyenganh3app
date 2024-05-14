@@ -9,19 +9,6 @@ import 'package:quickalert/models/quickalert_type.dart';
 import 'package:quickalert/widgets/quickalert_dialog.dart';
 import 'package:sqflite/sqflite.dart';
 
-class DatabaseHelper {
-  Database? _database;
-  
-  void insertData(String username ) async {
-      Map<String, dynamic> row = {
-        'username'  : username,
-        'useCheck' : 0
-      };
-      final db = await openDatabase('coffee.db');
-      await db.insert('users', row);
-    }
-}
-
 class DangKyWidget extends StatefulWidget {
   const DangKyWidget({Key? key}) : super(key: key);
 
@@ -60,31 +47,35 @@ class _DangKyWidgetState extends State<DangKyWidget> {
     String fullname = fullNameController.text;
     String password = passWordController.text;
     try {
-      final response = await http.post(
-        apiUrl,
-        body: jsonEncode(
-            {"username": username, "password": password, "fullname": fullname}),
-        headers: {"Content-Type": "application/json"},
-      );
+      final response = await http.post(Uri.parse(url + 'log/signup.php'), body: {
+        'username': username,
+        'password': password,
+        'fullname' : fullname       
+      });
       if (response.statusCode == 200) {
         try {
           Map<String, dynamic> jsonData = json.decode(response.body);
-          if (jsonData['message'] == "success") {
-            DatabaseHelper dbHelper = DatabaseHelper();
-            
-            dbHelper.insertData(username);
-
-            Navigator.pushNamed(context, "/");
-            QuickAlert.show(
-                context: context,
-                type: QuickAlertType.success,
-                text: "Đăng Ký Thành Công");
-          } else {
+          if (jsonData['message'] == "userhasnotnull") {
+            Navigator.pop(context);
             QuickAlert.show(
                 context: context,
                 type: QuickAlertType.error,
+                text: "Tài khoản đã tồn tại");
+          } else {
+            if(jsonData['message'] == "success"){
+              Navigator.pop(context);
+              QuickAlert.show(
+                context: context,
+                type: QuickAlertType.success,
+                text: "Đăng Ký Thành Công");
+            }else{
+              Navigator.pop(context);
+              QuickAlert.show(
+                context: context,
+                type: QuickAlertType.error,
                 text: "Đăng Ký Thất Bại");
-            Navigator.pop(context);
+            }
+            
           }
         } on Exception {}
       } else {
@@ -520,7 +511,11 @@ class _DangKyWidgetState extends State<DangKyWidget> {
                             padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
                             child: MaterialButton(
                               onPressed: () {
-                                _samePassword ? _DangKy() : null;
+                                if(fullNameController.text == "" || userNameController.text == "" || passWordController.text == ""){
+
+                                }else{
+                                  _samePassword ? _DangKy() : null;
+                                }
                               },
                               color: Color(0xFF4B2C20),
                               elevation: 5,

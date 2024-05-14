@@ -120,9 +120,9 @@ class _TrangChuState extends State<TrangChu> {
   Future<void> fetchProducts() async {
     final response = await http.get(Uri.parse(url + "product/hotproducts.php"));
     if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
+      List<dynamic> _data = jsonDecode(response.body);
       setState(() {
-        _products = data
+        _products = _data
             .map((item) => Product(
                   id: item['id'],
                   ten: item['ten'],

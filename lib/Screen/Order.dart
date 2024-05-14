@@ -48,33 +48,39 @@ class _OrderState extends State<Order> {
   void initState() {
     
     super.initState();
-    setState(() {
+    setStateIfMounted(() {
       isLoading = true;
     });
     fetchTableOrder();
-    setState(() {
+    setStateIfMounted(() {
       isLoading = false;
     });
     Timer.periodic(Duration(seconds:5), (Timer t) => fetchTableOrder());
   }
-
+   void setStateIfMounted(f) {
+    if (mounted) setState(f);
+  }
   Future<void> _ThemKhuVuc(String _ten) async {
     if (!mounted) return;
     final Uri apiUrl = Uri.parse(url + "tableorder/getTableOrder.php");
     final response = await http.post(
       apiUrl,
-      body: jsonEncode({"ten": _ten}),
-      headers: {"Content-Type": "application/json"},
+      body: {"ten": _ten},
     );
 
     if (response.statusCode == 200) {
       String message = "";
       try {
         Map<String, dynamic> jsonData = json.decode(response.body);
-        message = jsonData['message'];
-        if (message == "success") {
+        
+        if (jsonData['success'] == true) {
           Navigator.pop(context);
           fetchTableOrder();
+        }else{
+           QuickAlert.show(
+            context: context,
+            type: QuickAlertType.error,
+            text: "Khu Vực Đã Tồn Tại");
         }
       } on Exception {
         QuickAlert.show(
@@ -89,12 +95,21 @@ class _OrderState extends State<Order> {
   }
 
   Future<void> fetchTableOrder() async {
-    if (!mounted) return;
+    bool success = false;
     final response = await http.get(
-        Uri.parse(url + "tableorder/getTableOrder.php?get=fetchTableOrder"));
+        Uri.parse(url + "tableorder/getTableOrder.php"));
     if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
-      setState(() {
+      List<dynamic> jsonData = json.decode(response.body);
+      for (var item in jsonData){
+        setStateIfMounted(() {
+          success = item['success'] ?? true;
+        });
+      }
+      if (success == false) {
+        
+      }else{
+        List<dynamic> data = jsonDecode(response.body);
+      setStateIfMounted(() {
         _tableorder = data
             .map((item) => TableOrder(
                   id: item['id'],
@@ -104,6 +119,8 @@ class _OrderState extends State<Order> {
                 ))
             .toList();
       });
+      }
+      
     } else {
       showDialog(
         context: context,

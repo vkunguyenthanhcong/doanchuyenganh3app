@@ -7,6 +7,7 @@ import 'package:coffee_manager/Screen/HomeScreen.dart';
 import 'package:coffee_manager/Screen/ListHoaDon.dart';
 import 'package:coffee_manager/Screen/Order.dart';
 import 'package:coffee_manager/Screen/Profile.dart';
+import 'package:coffee_manager/Screen/ThemLoaiSP.dart';
 import 'package:coffee_manager/Screen/ThemSanPham.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
         '/addOrder' : (context) => AddOrder(),
         '/confirmAndBillOrder' : (context) => ConfirmAndBillOrder(), 
         '/listHoaDon' : (context) => ListHoaDon(),    
+        '/themloaisp' : (context) => ThemLoaiSP(),
         },
     );
   }

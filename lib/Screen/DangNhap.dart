@@ -162,10 +162,12 @@ class _DangNhapWidgetState extends State<DangNhapWidget> {
     String password = passWordController.text;
     try {
       final response = await http.post(
-        apiUrl,
-        body: jsonEncode({"username": username, "password": password}),
-        headers: {"Content-Type": "application/json"},
-      );
+      Uri.parse(url + 'log/login.php'),
+      body: {
+        'username': username,
+        'password': passWordController.text,
+      },
+    );
       if (response.statusCode == 200) {
         String message = "";
         String fullname = "";

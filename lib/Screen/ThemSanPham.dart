@@ -22,7 +22,7 @@ class Loai {
   factory Loai.fromJson(Map<String, dynamic> json) {
     return Loai(
       id: json['id'],
-      loai: json['loai'],
+      loai: json['tenloai'],
     );
   }
 }
@@ -51,8 +51,8 @@ class _ThemSanPhamState extends State<ThemSanPham> {
   }
 
   Future<void> fetchLoaiList() async {
-    final response = await http
-        .get(Uri.parse(url + "product/themsanpham.php?method=getTypeProduct"));
+    final response =
+        await http.get(Uri.parse(url + "product/getTypeProduct.php"));
     if (response.statusCode == 200) {
       try {
         List<dynamic> jsonResponse = jsonDecode(response.body);
@@ -143,49 +143,41 @@ class _ThemSanPhamState extends State<ThemSanPham> {
     String ten = _ten.text;
     String gia = _gia.text;
     String soluong = _soluong.text;
-    
 
-  if(ten == "" || gia == "" || soluong == "" || _selectedLoai.id == '-1'){
+    if (ten == "" || gia == "" || soluong == "" || _selectedLoai.id == '-1') {
       QuickAlert.show(
           context: context,
           type: QuickAlertType.error,
           text: "Bạn vui lòng điền đủ thông tin");
-    }else{
-       imageFile = _imageFile;
-       print(imageFile);
+    } else {
+      imageFile = _imageFile;
+      print(imageFile);
       FocusScope.of(context).requestFocus(new FocusNode());
-    var request = http.MultipartRequest(
-        'POST', Uri.parse(url + "product/themsanpham.php"));
+      var request = http.MultipartRequest(
+          'POST', Uri.parse(url + "product/addProduct.php"));
       var image = await http.MultipartFile.fromPath('image', imageFile!.path);
       request.files.add(image);
       request.fields['ten'] = ten;
-    request.fields['gia'] = gia;
-    request.fields['soluong'] = soluong;
-    request.fields['loai'] = _selectedLoai.id;
-    print(_selectedLoai.id);
+      request.fields['gia'] = gia;
+      request.fields['soluong'] = soluong;
+      request.fields['loai'] = _selectedLoai.id;
 
-    var response = await request.send();
+      var response = await request.send();
 
-    if (response.statusCode == 200) {
-      var responseData = await response.stream.bytesToString();
-
-      var parsedData = json.decode(responseData);
-      String imagePath = parsedData['file_path'];
-      _ten.text = "";
-      _gia.text = "";
-      _soluong.text = "";
-      _imageFile = null;
-      QuickAlert.show(
-          context: context,
-          type: QuickAlertType.success,
-          text: "Thêm Thành Công");
-    } else {
-      print('Failed to upload image');
+      if (response.statusCode == 200) {
+        var responseData = await response.stream.bytesToString();
+        _ten.text = "";
+        _gia.text = "";
+        _soluong.text = "";
+        _imageFile = null;
+        QuickAlert.show(
+            context: context,
+            type: QuickAlertType.success,
+            text: "Thêm Thành Công");
+      } else {
+        print('Failed to upload image');
+      }
     }
-    }
-    
-
-    
   }
 
   @override
@@ -224,12 +216,16 @@ class _ThemSanPhamState extends State<ThemSanPham> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                           ),
-                          child: isLoading == true ? Center(child: CircularProgressIndicator(),) : _imageFile == null
-                              ? Image(
-                                  image: AssetImage('images/logo.png'),
-                                  fit: BoxFit.fill,
+                          child: isLoading == true
+                              ? Center(
+                                  child: CircularProgressIndicator(),
                                 )
-                              : Image.file(_imageFile!),
+                              : _imageFile == null
+                                  ? Image(
+                                      image: AssetImage('images/logo.png'),
+                                      fit: BoxFit.fill,
+                                    )
+                                  : Image.file(_imageFile!),
                         ),
                         Container(
                             margin: EdgeInsets.zero,
@@ -495,14 +491,13 @@ class _ThemSanPhamState extends State<ThemSanPham> {
                     Padding(
                       padding: EdgeInsets.fromLTRB(0, 30, 0, 0),
                       child: MaterialButton(
-                        onPressed: (){
-                          
-                          if (_imageFile == null){
+                        onPressed: () {
+                          if (_imageFile == null) {
                             CompressImage('images/logo.png');
-                          }else{
+                          } else {
                             uploadImageAndString();
-                          }},
-                            
+                          }
+                        },
                         color: Color(0xFF4B2C20),
                         elevation: 5,
                         shape: RoundedRectangleBorder(

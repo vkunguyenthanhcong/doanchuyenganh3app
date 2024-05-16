@@ -65,7 +65,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
               Icon(Icons.warehouse_rounded, size: 30),
               FaIcon(FontAwesomeIcons.home, size: 25,),
               Icon(Icons.table_bar, size: 30),
-              FaIcon(FontAwesomeIcons.chartSimple, size: 30,),
+              FaIcon(FontAwesomeIcons.pieChart, size: 30,),
             ],
             color: Colors.white,
             buttonBackgroundColor: Colors.white,

@@ -64,7 +64,7 @@ class _TrangChuState extends State<TrangChu> {
   }
 
   Future<void> fetchChartData() async {
-    final response = await http.get(Uri.parse(url + "chart/chart.php?home"));
+    final response = await http.get(Uri.parse(url + "chart/chart.php"));
     if (response.statusCode == 200) {
       List<dynamic> jsonData = json.decode(response.body);
       setState(() {

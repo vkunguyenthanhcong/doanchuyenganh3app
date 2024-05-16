@@ -277,7 +277,7 @@ class _DashboardState extends State<Dashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text("Doanh Thu"),
+          title: Text("Quản Lý"),
           centerTitle: true,
           shadowColor: Colors.grey,
           automaticallyImplyLeading: false,
@@ -293,21 +293,65 @@ class _DashboardState extends State<Dashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.max,
               children: [
-                MaterialButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/listHoaDon');
-                  },
-                  child: Text(
-                    'Thống kê',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  color: Colors.primaries.last,
-                  elevation: 5,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(50.0),
-                    side: BorderSide(color: Colors.transparent, width: 1),
-                  ),
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                  children: [
+                    MaterialButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/listHoaDon');
+                      },
+                      child: Text(
+                        'Thống kê',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      color: Colors.primaries.last,
+                      elevation: 5,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(50.0),
+                        side: BorderSide(color: Colors.transparent, width: 1),
+                      ),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    SizedBox(width: 10,),
+                    MaterialButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/lichlamviec');
+                      },
+                      child: Text(
+                        'Lịch làm việc',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      color: Colors.primaries.last,
+                      elevation: 5,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(50.0),
+                        side: BorderSide(color: Colors.transparent, width: 1),
+                      ),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    SizedBox(width: 10,),
+                    MaterialButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/quanlynhanvien');
+                      },
+                      child: Text(
+                        'Quản lý nhân viên',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      color: Colors.primaries.last,
+                      elevation: 5,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(50.0),
+                        side: BorderSide(color: Colors.transparent, width: 1),
+                      ),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                  ],
+                ),
                 ),
                 Text(
                   'Doanh thu 7 ngày gần đây (${_7dayago} - ${daynow})',

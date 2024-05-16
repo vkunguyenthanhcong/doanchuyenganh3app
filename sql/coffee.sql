@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 14, 2024 at 07:37 AM
+-- Generation Time: May 16, 2024 at 04:44 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -43,8 +43,29 @@ CREATE TABLE `bill` (
 --
 
 INSERT INTO `bill` (`id`, `idban`, `idmon`, `giovao`, `giora`, `idhoadon`, `soluong`, `tinhtrang`) VALUES
-(7, 2, 12, '2024-05-14 12:34:20', '2024-05-14 12:35:58', '12342014052024ban2', 1, 1),
-(8, 2, 12, '2024-05-14 12:34:20', '2024-05-14 12:35:58', '12342014052024ban2', 1, 1);
+(7, 2, 12, '2024-05-14 12:34:20', '2024-05-16 19:53:13', '12342014052024ban2', 1, 1),
+(8, 2, 12, '2024-05-14 12:34:20', '2024-05-16 19:53:13', '12342014052024ban2', 1, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `calamviec`
+--
+
+CREATE TABLE `calamviec` (
+  `id` int(100) NOT NULL,
+  `ngay` date NOT NULL,
+  `ca` varchar(100) NOT NULL,
+  `soluong` int(100) NOT NULL DEFAULT 0,
+  `dadangky` int(100) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `calamviec`
+--
+
+INSERT INTO `calamviec` (`id`, `ngay`, `ca`, `soluong`, `dadangky`) VALUES
+(23, '2024-05-16', '6:30 - 11:30', 5, 0);
 
 -- --------------------------------------------------------
 
@@ -68,7 +89,31 @@ CREATE TABLE `hoadon` (
 
 INSERT INTO `hoadon` (`id`, `idhoadon`, `nhanvien`, `tongtien`, `giovao`, `giora`, `idban`) VALUES
 (1, '17004813052024ban2', 'admin', 75000, '2024-05-13 17:00:48', '0000-00-00 00:00:00', 2),
-(2, '12342014052024ban2', 'admin', 30000, '2024-05-14 12:34:20', '2024-05-14 12:35:58', 2);
+(2, '12342014052024ban2', 'admin', 30000, '2024-05-14 12:34:20', '2024-05-14 12:35:58', 2),
+(3, '12342014052024ban2', 'admin', 30000, '2024-05-14 12:34:20', '2024-05-16 19:53:13', 2);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `lichlam`
+--
+
+CREATE TABLE `lichlam` (
+  `id` int(100) NOT NULL,
+  `nhanvien` varchar(100) NOT NULL,
+  `idca` int(100) NOT NULL,
+  `tinhtrang` int(11) DEFAULT 0,
+  `checkin` datetime DEFAULT NULL,
+  `checkout` datetime DEFAULT NULL,
+  `tongluong` int(100) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `lichlam`
+--
+
+INSERT INTO `lichlam` (`id`, `nhanvien`, `idca`, `tinhtrang`, `checkin`, `checkout`, `tongluong`) VALUES
+(24, 'admin', 23, 0, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -142,17 +187,16 @@ CREATE TABLE `users` (
   `username` varchar(100) NOT NULL,
   `password` varchar(100) NOT NULL,
   `roll` int(10) NOT NULL DEFAULT 0,
-  `fullname` varchar(100) NOT NULL
+  `fullname` varchar(100) NOT NULL,
+  `luong` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `password`, `roll`, `fullname`) VALUES
-(1, 'admin', 'admin', 0, 'Công'),
-(8, 'admin1', 'admin1', 0, 'công'),
-(9, 'ntc1309', 'ntc1309', 0, 'hhhhh');
+INSERT INTO `users` (`id`, `username`, `password`, `roll`, `fullname`, `luong`) VALUES
+(1, 'admin', 'admin', 0, 'Công', 10000);
 
 --
 -- Indexes for dumped tables
@@ -165,9 +209,21 @@ ALTER TABLE `bill`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `calamviec`
+--
+ALTER TABLE `calamviec`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `hoadon`
 --
 ALTER TABLE `hoadon`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `lichlam`
+--
+ALTER TABLE `lichlam`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -205,10 +261,22 @@ ALTER TABLE `bill`
   MODIFY `id` int(100) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
+-- AUTO_INCREMENT for table `calamviec`
+--
+ALTER TABLE `calamviec`
+  MODIFY `id` int(100) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+
+--
 -- AUTO_INCREMENT for table `hoadon`
 --
 ALTER TABLE `hoadon`
-  MODIFY `id` int(100) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(100) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `lichlam`
+--
+ALTER TABLE `lichlam`
+  MODIFY `id` int(100) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `loaisanpham`

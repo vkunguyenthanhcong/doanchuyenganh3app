@@ -456,7 +456,9 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
         setStateIfMounted(() {
           _giovao = data['time'];
           cacheGioVao = data['time'];
-          data['tongtien'] == null ? _tongTiened = "0" : _tongTiened = data['tongtien'];
+          data['tongtien'] == null
+              ? _tongTiened = "0"
+              : _tongTiened = data['tongtien'];
         });
       }
     } else {

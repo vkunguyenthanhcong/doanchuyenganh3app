@@ -107,7 +107,7 @@ class _ProfileState extends State<Profile> {
       if (jsonData['success'] == true) {
         setStateIfMounted(() {
           _timeToDo = jsonData['time'];
-          _tinhTrang = jsonData['tinhtrang'];
+          _tinhTrang = jsonData['tinhtrang'].toString();
           if(_tinhTrang == '0'){
              _checkIn = "Chưa Check In";
           }else if(_tinhTrang == '1'){

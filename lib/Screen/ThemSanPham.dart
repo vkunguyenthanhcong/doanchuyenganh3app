@@ -4,7 +4,9 @@ import 'dart:typed_data';
 
 import 'package:coffee_manager/global.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:flutter_masked_text2/flutter_masked_text2.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -12,17 +14,18 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:quickalert/quickalert.dart';
 import 'package:image/image.dart' as img;
+import 'package:intl/intl.dart';
 
 class Loai {
-  final String id;
-  final String loai;
+  final int id;
+  final String tenloai;
 
-  Loai({required this.id, required this.loai});
+  Loai({required this.id, required this.tenloai});
 
   factory Loai.fromJson(Map<String, dynamic> json) {
     return Loai(
       id: json['id'],
-      loai: json['tenloai'],
+      tenloai: json['tenloai'],
     );
   }
 }
@@ -40,14 +43,32 @@ class _ThemSanPhamState extends State<ThemSanPham> {
   bool isLoading = false;
   final TextEditingController _ten = TextEditingController();
   final TextEditingController _gia = TextEditingController();
+  final NumberFormat _numberFormat = NumberFormat("#,##0", "en_US");
   final TextEditingController _soluong = TextEditingController();
   List<Loai> _loaiList = [];
-  Loai _selectedLoai = Loai(id: '-1', loai: 'Loading...');
+  Loai _selectedLoai = Loai(id: -1, tenloai: 'Loading...');
 
   @override
   void initState() {
     super.initState();
     fetchLoaiList();
+    _gia.addListener(_formatValue);
+  }
+
+ void _formatValue() {
+    final value = _gia.text.replaceAll('.', '');
+    try {
+      final formattedValue = _numberFormat.format(int.parse(value));
+      if (value != formattedValue) {
+        _gia.value = TextEditingValue(
+          text: formattedValue,
+          selection: TextSelection.collapsed(offset: formattedValue.length),
+        );
+      }
+    } catch (e) {
+      // Handle the case where the input value cannot be parsed as an integer
+      print("Error formatting value: $e");
+    }
   }
 
   Future<void> fetchLoaiList() async {
@@ -56,7 +77,6 @@ class _ThemSanPhamState extends State<ThemSanPham> {
     if (response.statusCode == 200) {
       try {
         List<dynamic> jsonResponse = jsonDecode(response.body);
-
         setState(() {
           _loaiList = jsonResponse.map((json) => Loai.fromJson(json)).toList();
           _selectedLoai = _loaiList.first;
@@ -66,6 +86,40 @@ class _ThemSanPhamState extends State<ThemSanPham> {
       }
     } else {
       print('Failed to load loai: ${response.statusCode}');
+    }
+  }
+
+  Future<void> uploadProducts() async {
+    if (_ten.text == "" ||
+        _gia.text == "" ||
+        _soluong.text == "" ||
+        _selectedLoai.id == '-1') {
+      QuickAlert.show(
+          context: context,
+          type: QuickAlertType.error,
+          text: "Bạn vui lòng điền đủ thông tin");
+    } else {
+      final response = await http
+          .post(Uri.parse(url + "product/addProductWithOutImage.php"), body: {
+        'ten': _ten.text,
+        'loai': _selectedLoai.id.toString(),
+        'gia': _gia.text,
+        'soluong': _soluong.text
+      });
+      if (response.statusCode == 200) {
+        QuickAlert.show(
+            context: context,
+            type: QuickAlertType.success,
+            text: "Thêm thành công");
+
+        _ten.text = "";
+        _gia.text = "";
+        _soluong.text = "";
+        _imageFile = null;
+      } else {
+        print('Failed to load loai: ${response.statusCode}');
+      }
+      FocusScope.of(context).requestFocus(new FocusNode());
     }
   }
 
@@ -151,7 +205,7 @@ class _ThemSanPhamState extends State<ThemSanPham> {
           text: "Bạn vui lòng điền đủ thông tin");
     } else {
       imageFile = _imageFile;
-      print(imageFile);
+
       FocusScope.of(context).requestFocus(new FocusNode());
       var request = http.MultipartRequest(
           'POST', Uri.parse(url + "product/addProduct.php"));
@@ -160,7 +214,8 @@ class _ThemSanPhamState extends State<ThemSanPham> {
       request.fields['ten'] = ten;
       request.fields['gia'] = gia;
       request.fields['soluong'] = soluong;
-      request.fields['loai'] = _selectedLoai.id;
+
+      request.fields['loai'] = _selectedLoai.id.toString();
 
       var response = await request.send();
 
@@ -296,7 +351,7 @@ class _ThemSanPhamState extends State<ThemSanPham> {
                                   .map<DropdownMenuItem<Loai>>((Loai loai) {
                                 return DropdownMenuItem<Loai>(
                                   value: loai,
-                                  child: Text(loai.loai),
+                                  child: Text(loai.tenloai),
                                 );
                               }).toList(),
                             )))),
@@ -383,7 +438,11 @@ class _ThemSanPhamState extends State<ThemSanPham> {
                     Material(
                       elevation: 5,
                       borderRadius: BorderRadius.circular(15.0),
-                      child: TextField(
+                      child: TextFormField(
+                        keyboardType: TextInputType.number,
+                        inputFormatters: <TextInputFormatter>[
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                         controller: _gia,
                         obscureText: false,
                         textAlign: TextAlign.start,
@@ -394,7 +453,6 @@ class _ThemSanPhamState extends State<ThemSanPham> {
                           fontSize: 14,
                           color: Color(0xff000000),
                         ),
-                        keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           disabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15.0),
@@ -491,9 +549,9 @@ class _ThemSanPhamState extends State<ThemSanPham> {
                     Padding(
                       padding: EdgeInsets.fromLTRB(0, 30, 0, 0),
                       child: MaterialButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (_imageFile == null) {
-                            CompressImage('images/logo.png');
+                            uploadProducts();
                           } else {
                             uploadImageAndString();
                           }

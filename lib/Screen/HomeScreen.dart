@@ -119,19 +119,29 @@ class _TrangChuState extends State<TrangChu> {
 
   Future<void> fetchProducts() async {
     final response = await http.get(Uri.parse(url + "product/hotproducts.php"));
+
     if (response.statusCode == 200) {
-      List<dynamic> _data = jsonDecode(response.body);
-      setState(() {
-        _products = _data
-            .map((item) => Product(
-                  id: item['id'],
-                  ten: item['ten'],
-                  image: item['image'],
-                  gia: item['gia'],
-                  loai: item['loai'],
-                ))
-            .toList();
-      });
+
+        List<dynamic> _data = jsonDecode(response.body);
+        for(var item in _data){
+          if(item['success'] == false){
+
+          }else{
+            setState(() {
+          _products = _data
+              .map((item) => Product(
+                    id: item['id'],
+                    ten: item['ten'],
+                    image: item['image'],
+                    gia: item['gia'],
+                    loai: item['loai'],
+                  ))
+              .toList();
+        });
+          }
+        }
+        
+
     } else {
       showDialog(
         context: context,

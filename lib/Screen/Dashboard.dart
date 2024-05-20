@@ -77,13 +77,15 @@ class _DashboardState extends State<Dashboard> {
     fetchChartData();
     fetchDataWithQuarter();
   }
-
+  void setStateIfMounted(f) {
+    if (mounted) setState(f);
+  }
   Future<void> fetchDataWithQuarter() async {
     final response = await http.get(Uri.parse(url + "chart/chart.php?home"));
     if (response.statusCode == 200) {
       List<dynamic> jsonData = json.decode(response.body);
 
-      setState(() {
+      setStateIfMounted(() {
         _datawithQuarter = jsonData.cast<Map<String, dynamic>>();
         calculateQuarterlyRevenue();
       });
@@ -156,7 +158,7 @@ class _DashboardState extends State<Dashboard> {
     if (response.statusCode == 200) {
       List<dynamic> jsonData = json.decode(response.body);
       print(jsonData);
-      setState(() {
+      setStateIfMounted(() {
         _data = jsonData.cast<Map<String, dynamic>>();
         _datawithmonth = jsonData.cast<Map<String, dynamic>>();
         _isLoading = false;
@@ -164,7 +166,7 @@ class _DashboardState extends State<Dashboard> {
     } else {
       throw Exception('Failed to load data');
     }
-    setState(() {});
+    setStateIfMounted(() {});
   }
 
   List<charts.Series<Map<String, dynamic>, String>> _createSeriesWithMonth(

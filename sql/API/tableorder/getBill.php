@@ -1,72 +1,75 @@
 <?php
 include '../connect.php';
-if($_SERVER['REQUEST_METHOD'] === "GET" && isset($_GET['idban'])){
-    $idban = $_GET['idban'];
-    $sql = "SELECT b.soluong, pr.ten, pr.gia FROM bill b, products pr WHERE b.tinhtrang = 0 AND b.idban = '$idban' AND pr.id = b.idmon";
-    $result = mysqli_query($conn, $sql);
-    if(mysqli_num_rows($result) > 0){
-        $data = array();
-        while ($row = mysqli_fetch_assoc($result)) {
-            // Parse date to suitable format
-            $data[] = $row;
-        }
-        echo json_encode($data);
-    }else{
-        $data = array();
-        echo json_encode($data);
-    }
-}elseif($_SERVER['REQUEST_METHOD'] === "GET" && isset($_GET['id']) && isset($_GET['tienChuaXacNhan'])){
-    $idban = $_GET['id'];
-    $sql = "SELECT SUM(pr.gia) AS tongtien FROM bill b , products pr WHERE b.tinhtrang = 0 AND b.idban = '$idban' AND pr.id = b.idmon";
-    $result = mysqli_query($conn, $sql);
-    if(mysqli_num_rows($result) > 0){
-        $row = mysqli_fetch_assoc($result);
-        echo json_encode(array('tongtien' => $row['tongtien']));
-    }
-}elseif($_SERVER['REQUEST_METHOD'] === 'POST'){
-    $idban = $_POST['idban'];
-    $sql = "UPDATE bill SET tinhtrang = 1 WHERE idban = '$idban' AND tinhtrang = 0";
-    $result = mysqli_query($conn, $sql);
-}elseif($_SERVER['REQUEST_METHOD'] === "GET" && isset($_GET['idBanDaXacNhan'])){
-    $idban = $_GET['idBanDaXacNhan'];
-    $sql = "SELECT b.soluong, pr.ten, pr.gia FROM bill b, products pr WHERE b.tinhtrang = 1 AND b.idban = '$idban' AND pr.id = b.idmon";
-    $result = mysqli_query($conn, $sql);
-    if(mysqli_num_rows($result) > 0){
-        $data = array();
-        while ($row = mysqli_fetch_assoc($result)) {
-            // Parse date to suitable format
-            $data[] = $row;
-        }
-        echo json_encode($data);
-    }else{
-        $data = array();
-        echo json_encode($data);
-    }
-}elseif($_SERVER['REQUEST_METHOD'] === "GET" && isset( $_GET["getGioVaoDaXacNhan"])){
-    $idban = $_GET["getGioVaoDaXacNhan"];
-    $sql = "SELECT b.giovao FROM bill b WHERE b.idban = '$idban' ORDER BY b.giovao ASC";
-    $result = mysqli_query($conn, $sql);
-    $sql_1 = "SELECT SUM(pr.gia) AS tongtien FROM bill b, products pr WHERE b.idban = '$idban' AND tinhtrang = 1 AND b.idmon = pr.id";
-    $result_1 = mysqli_query($conn, $sql_1);
-    if(mysqli_num_rows($result_1) > 0 && mysqli_num_rows($result) > 0){
-        $row = mysqli_fetch_assoc($result);
-        $row_1 = mysqli_fetch_assoc($result_1);
-        echo json_encode(array("success" => true, "time"=> $row['giovao'], "tongtien" => $row_1['tongtien']));
-    }else{
-        echo json_encode(array("success" => false));
-    }
 
-}elseif($_SERVER['REQUEST_METHOD'] === "DELETE" && isset($_GET['idBanHuy'])){
-    $idban = $_GET['idBanHuy'];
-    $sql = "DELETE FROM bill WHERE idban = '$idban' AND tinhtrang = 0";
-    $result = mysqli_query($conn, $sql);
-    if($result){
-        echo json_encode(array("success" => true));
-    }else{
-        echo json_encode(array("success" => false));
+if ($_SERVER['REQUEST_METHOD'] === "GET") {
+    if (isset($_GET['idban'])) {
+        $idban = $_GET['idban'];
+        $stmt = $conn->prepare("SELECT b.soluong, pr.ten, pr.gia FROM bill b JOIN products pr ON pr.id = b.idmon WHERE b.tinhtrang = 0 AND b.idban = ?");
+        $stmt->bind_param("i", $idban);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $data = array();
+        while ($row = $result->fetch_assoc()) {
+            $data[] = $row;
+        }
+        echo json_encode($data);
+    } elseif (isset($_GET['id']) && isset($_GET['tienChuaXacNhan'])) {
+        $idban = $_GET['id'];
+        $stmt = $conn->prepare("SELECT pr.gia, b.soluong FROM bill b JOIN products pr ON pr.id = b.idmon WHERE b.tinhtrang = 0 AND b.idban = ?");
+        $stmt->bind_param("i", $idban);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tongtien = 0;
+        while ($row = $result->fetch_assoc()) {
+            $tongtien += $row['gia'] * $row['soluong'];
+        }
+        echo json_encode(array('tongtien' => $tongtien));
+    } elseif (isset($_GET['idBanDaXacNhan'])) {
+        $idban = $_GET['idBanDaXacNhan'];
+        $stmt = $conn->prepare("SELECT b.soluong, pr.ten, pr.gia FROM bill b JOIN products pr ON pr.id = b.idmon WHERE b.tinhtrang = 1 AND b.idban = ?");
+        $stmt->bind_param("i", $idban);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $data = array();
+        while ($row = $result->fetch_assoc()) {
+            $data[] = $row;
+        }
+        echo json_encode($data);
+    } elseif (isset($_GET['getGioVaoDaXacNhan'])) {
+        $idban = $_GET['getGioVaoDaXacNhan'];
+        $stmt = $conn->prepare("SELECT b.giovao FROM bill b WHERE b.idban = ? ORDER BY b.giovao ASC");
+        $stmt->bind_param("i", $idban);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tongtien = 0;
+        $stmt_1 = $conn->prepare("SELECT pr.gia, b.soluong FROM bill b JOIN products pr ON pr.id = b.idmon WHERE b.idban = ? AND b.tinhtrang = 1");
+        $stmt_1->bind_param("i", $idban);
+        $stmt_1->execute();
+        $result_1 = $stmt_1->get_result();
+        while ($row_1 = $result_1->fetch_assoc()) {
+            $tongtien += $row_1['soluong'] * $row_1['gia'];
+        }
+        if ($row = $result->fetch_assoc()) {
+            echo json_encode(array("success" => true, "time" => $row['giovao'], "tongtien" => $tongtien));
+        } else {
+            echo json_encode(array("success" => false));
+        }
+    }
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['idban'])) {
+        $idban = $_POST['idban'];
+        $stmt = $conn->prepare("UPDATE bill SET tinhtrang = 1 WHERE idban = ? AND tinhtrang = 0");
+        $stmt->bind_param("i", $idban);
+        $stmt->execute();
+        echo json_encode(array("success" => $stmt->affected_rows > 0));
+    }
+} elseif ($_SERVER['REQUEST_METHOD'] === "DELETE") {
+    if (isset($_GET['idBanHuy'])) {
+        $idban = $_GET['idBanHuy'];
+        $stmt = $conn->prepare("DELETE FROM bill WHERE idban = ? AND tinhtrang = 0");
+        $stmt->bind_param("i", $idban);
+        $stmt->execute();
+        echo json_encode(array("success" => $stmt->affected_rows > 0));
     }
 }
-
-
-
 ?>

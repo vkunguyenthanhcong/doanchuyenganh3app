@@ -41,7 +41,9 @@ class Loai {
   final String id;
   final String tenloai;
 }
+
 String? idban;
+
 class Product {
   Product(
       {required this.id,
@@ -67,7 +69,6 @@ class _AddOrderState extends State<AddOrder> {
   List<Product> _filterproducts = [];
   String? _soluong;
   String? _tongtien;
-  
 
   @override
   void dispose() {
@@ -77,7 +78,8 @@ class _AddOrderState extends State<AddOrder> {
   @override
   void initState() {
     super.initState();
-    fetchLoaiList(); fetchProducts(0);
+    fetchLoaiList();
+    fetchProducts(0);
   }
 
   void setStateIfMounted(f) {
@@ -156,13 +158,27 @@ class _AddOrderState extends State<AddOrder> {
         'idmon': idmon,
       });
       if (response.statusCode == 200) {
+        print(response.body);
         try {
           Map<String, dynamic> jsonData = json.decode(response.body);
-          setStateIfMounted(() {
-            _soluong = jsonData['soluong'];
-            _tongtien = jsonData['tongtien'];
-          });
-        } on Exception {}
+
+          if (jsonData['success'] == false) {
+            QuickAlert.show(
+                context: context,
+                type: QuickAlertType.warning,
+                text: "${jsonData['thongbao']}");
+          } else {
+            setStateIfMounted(() {
+              _soluong = jsonData['soluong'];
+              _tongtien = jsonData['tongtien'];
+            });
+          }
+        } on Exception {
+          QuickAlert.show(
+              context: context,
+              type: QuickAlertType.error,
+              text: "Vui lòng kiểm tra kết nối mạng");
+        }
       } else {
         Navigator.pop(context);
         QuickAlert.show(
@@ -188,7 +204,7 @@ class _AddOrderState extends State<AddOrder> {
           Map<String, dynamic> jsonData = json.decode(response.body);
           setStateIfMounted(() {
             _soluong = jsonData['soluong'];
-            _tongtien = jsonData['tongtien'];
+            _tongtien = jsonData['tongtien'].toString();
           });
         } on Exception {}
       } else {
@@ -213,7 +229,7 @@ class _AddOrderState extends State<AddOrder> {
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     setStateIfMounted(() {
       idban = data['idban'];
-  getMoneyTinhTrang(idban.toString());
+      getMoneyTinhTrang(idban.toString());
     });
     return GestureDetector(
         onTap: () {

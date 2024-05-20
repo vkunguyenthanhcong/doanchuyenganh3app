@@ -20,112 +20,100 @@ class DangNhapWidget extends StatefulWidget {
 }
 
 class DatabaseHelper {
-  void createTable() async {
+  Future<void> createTable() async {
     try {
       final db = await openDatabase('coffee.db');
       await db.execute(
-        'CREATE TABLE users(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, useCheck INTEGER)',
+        'CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, useCheck INTEGER)',
       );
-    } on Exception catch (_) {}
-  }
-
-  Future<List<Map<String, dynamic>>> retrieveUserOrders(String username) async {
-    final db = await openDatabase('coffee.db');
-    return await db
-        .rawQuery('SELECT * FROM users WHERE username = ?', [username]);
+    } catch (e) {
+      print('Error creating table: $e');
+    }
   }
 
   Future<void> insert(String username, int useCheck) async {
-    final db = await openDatabase('coffee.db');
-    await db.execute('INSERT INTO users (username, useCheck) VALUES (?, ?)',
-        [username, useCheck]);
+    try {
+      final db = await openDatabase('coffee.db');
+      await db.execute(
+          'INSERT INTO users (username, useCheck) VALUES (?, ?)',
+          [username, useCheck]);
+    } catch (e) {
+      print('Error inserting user: $e');
+    }
   }
 
   Future<List<Map<String, dynamic>>> checkUser() async {
-    final db = await openDatabase('coffee.db');
-    return await db.rawQuery('SELECT * FROM users');
+    try {
+      final db = await openDatabase('coffee.db');
+      return await db.rawQuery('SELECT * FROM users');
+    } catch (e) {
+      print('Error checking user: $e');
+      return [];
+    }
   }
 }
 
 class _DangNhapWidgetState extends State<DangNhapWidget> {
   bool _passwordVisible = false;
-  bool _reverse = false;
   bool useCheck = false;
   String? username;
-  List<Map<String, dynamic>> _data = [];
   final TextEditingController userNameController = TextEditingController();
   final TextEditingController passWordController = TextEditingController();
   late SharedPreferences logindata;
-  DatabaseHelper db = new DatabaseHelper();
+  late DatabaseHelper db;
+
   @override
   void initState() {
     super.initState();
+    db = DatabaseHelper();
     init();
   }
 
   Future<void> init() async {
-    db.createTable();
-    //check xem đã có tài khoản lưu trong database hay chưa
+    await db.createTable();
     List<Map<String, dynamic>> users = await db.checkUser();
     for (final user in users) {
       if (user['username'] == "") {
-        //không có username nào được lưu || hiện form đăng nhập
+        // No username saved, show login form
       } else {
         setState(() {
           username = user['username'];
         });
-        if (user['useCheck'] == 0) {
-          setState(() {
-            useCheck = false;
-          });
-        } else {
-          setState(() {
-            useCheck = true;
-          });
-        }
+        setState(() {
+          useCheck = user['useCheck'] == 1;
+        });
       }
     }
   }
 
-  insertNewUser() {
-    db.insert(userNameController.text, 0);
+  Future<void> insertNewUser() async {
+    await db.insert(userNameController.text, 0);
   }
 
-  final LocalAuthentication _localAuthentication = LocalAuthentication();
-  Future<void> checkBiometric() async {
+  void showBiometricDialog() async {
+    final LocalAuthentication _localAuthentication = LocalAuthentication();
     bool canCheckBiometrics = await _localAuthentication.canCheckBiometrics;
-
     print('Biometrics supported: $canCheckBiometrics');
-    getAvailableBiometrics();
-  }
-
-  Future<void> getAvailableBiometrics() async {
-    List<BiometricType> availableBiometrics =
-        await _localAuthentication.getAvailableBiometrics();
-
-    print('Available biometrics: $availableBiometrics');
-    authenticate();
-  }
-
-  Future<void> authenticate() async {
-    bool isAuthenticated = false;
-
-    try {
-      isAuthenticated = await _localAuthentication.authenticate(
+    if (canCheckBiometrics) {
+      List<BiometricType> availableBiometrics =
+          await _localAuthentication.getAvailableBiometrics();
+      print('Available biometrics: $availableBiometrics');
+      try {
+         bool isAuthenticated = await _localAuthentication.authenticate(
           localizedReason: 'Authenticate to access the app',
           options: const AuthenticationOptions(
             stickyAuth: true,
             biometricOnly: true,
             useErrorDialogs: true,
           ));
-    } catch (e) {
-      print('Error during biometric authentication: $e');
-    }
-
-    if (isAuthenticated) {
-      getData();
-    } else {
-      print('Biometric authentication failed');
+        if (isAuthenticated) {
+          getData();
+        } else {
+          print('Biometric authentication failed');
+        }
+      } catch (e) {
+        print('Error during biometric authentication: $e');
+      }
     }
   }
 
@@ -137,65 +125,64 @@ class _DangNhapWidgetState extends State<DangNhapWidget> {
       setState(() {
         passWordController.text = jsonResponse['password'];
       });
-      _DangNhap(username.toString());
+      _dangNhap(username.toString());
     } else {
       print('Failed to load data: ${response.statusCode}');
     }
   }
 
-  Future<void> _DangNhap(String _username) async {
+  Future<void> _dangNhap(String _username) async {
     SharedPreferences.setMockInitialValues({});
     logindata = await SharedPreferences.getInstance();
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return Scaffold(
-          backgroundColor: Colors.transparent ,
+          backgroundColor: Colors.transparent,
           body: Center(
             child: CircularProgressIndicator(),
           ),
         );
       },
     );
-    final Uri apiUrl = Uri.parse(url + "log/login.php");
     String username = _username;
     String password = passWordController.text;
     try {
       final response = await http.post(
-      Uri.parse(url + 'log/login.php'),
-      body: {
-        'username': username,
-        'password': passWordController.text,
-      },
-    );
+        Uri.parse(url + 'log/login.php'),
+        body: {
+          'username': username,
+          'password': passWordController.text,
+        },
+      );
       if (response.statusCode == 200) {
-        String message = "";
-        String fullname = "";
         try {
           Map<String, dynamic> jsonData = json.decode(response.body);
-          if (jsonData['message'] == "success") {
-            setState(() {
-              fullname = jsonData['fullname'];
-            });
-            logindata.setString('fullname', fullname);
-            logindata.setString('username', username);
-            Navigator.pushNamed(context, '/trangchu');
+          print(jsonData['roll']);
+          if (jsonData['success'] == true) {
+            if (jsonData['roll'] == '0') {
+              Navigator.pop(context);
+              QuickAlert.show(
+                  context: context,
+                  type: QuickAlertType.error,
+                  text: "Bạn không phải nhân viên chính thức");
+            } else {
+              logindata.setString('fullname', jsonData['fullname']);
+              logindata.setString('username', username);
+              Navigator.pushNamed(context, '/trangchu');
+            }
           } else {
-            Fluttertoast.showToast(
-                msg: "Tài khoản hoặc mật khẩu sai",
-                toastLength: Toast.LENGTH_SHORT,
-                gravity: ToastGravity.BOTTOM,
-                timeInSecForIosWeb: 1,
-                backgroundColor: Colors.red,
-                textColor: Colors.white,
-                fontSize: 16.0);
+            QuickAlert.show(
+                context: context,
+                type: QuickAlertType.error,
+                text: "Tài khoản hoặc mật khẩu sái");
             Navigator.pop(context);
           }
-        } on Exception {
+        } on Exception catch (e) {
           print(e);
         }
       }
-    } on Exception {
+    } on Exception catch (e) {
       Navigator.pop(context);
       QuickAlert.show(
           context: context,
@@ -205,15 +192,10 @@ class _DangNhapWidgetState extends State<DangNhapWidget> {
   }
 
   @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        FocusScope.of(context).requestFocus(new FocusNode());
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       child: Scaffold(
         bottomNavigationBar: Container(
@@ -248,7 +230,7 @@ class _DangNhapWidgetState extends State<DangNhapWidget> {
             ),
           ),
         ),
-        backgroundColor: Color(0XFFF8EBD8),
+        backgroundColor:        Color(0XFFF8EBD8),
         body: SafeArea(
           top: true,
           child: SizedBox(
@@ -265,7 +247,6 @@ class _DangNhapWidgetState extends State<DangNhapWidget> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        ///***If you have exported images you must have to copy those images in assets/images directory.
                         Padding(
                           padding: EdgeInsets.fromLTRB(0, 0, 0, 50),
                           child: Image(
@@ -275,90 +256,88 @@ class _DangNhapWidgetState extends State<DangNhapWidget> {
                             fit: BoxFit.fill,
                           ),
                         ),
-                        username != null ? Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Padding(
-                                padding: EdgeInsets.symmetric(
-                                    vertical: 10, horizontal: 20),
-                                child:Text('Xin chào, ${username}')
+                        username != null
+                            ? Row(
+                                mainAxisSize: MainAxisSize.max,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Padding(
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: 10, horizontal: 20),
+                                      child: Text('Xin chào, ${username}')),
+                                  InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        useCheck = false;
+                                        username = null;
+                                      });
+                                    },
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(50),
+                                      ),
+                                      child: Padding(
+                                        padding: EdgeInsets.all(5),
+                                        child: FaIcon(
+                                            FontAwesomeIcons.arrowsRotate),
+                                      ),
                                     ),
-                            InkWell(
-                              onTap: () {
-                                setState(() {
-                                  useCheck = false;
-                                  username = null;
-                                });
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(50),
-                                ),
-                                child: Padding(
-                                  padding: EdgeInsets.all(5),
-                                  child: FaIcon(FontAwesomeIcons.arrowsRotate),
-                                ),
-                              ),
-                            )
-                          ],
-                        ) : Padding(
+                                  )
+                                ],
+                              )
+                            : Padding(
                                 padding: EdgeInsets.symmetric(
                                     vertical: 10, horizontal: 20),
                                 child: Material(
+                                  borderRadius: BorderRadius.circular(15.0),
+                                  elevation: 5,
+                                  shadowColor: Colors.grey,
+                                  child: TextField(
+                                    controller: userNameController,
+                                    obscureText: false,
+                                    textAlign: TextAlign.start,
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w400,
+                                      fontStyle: FontStyle.normal,
+                                      fontSize: 14,
+                                      color: Color(0xff000000),
+                                    ),
+                                    decoration: InputDecoration(
+                                      disabledBorder: OutlineInputBorder(
                                         borderRadius:
                                             BorderRadius.circular(15.0),
-                                        elevation: 5,
-                                        shadowColor: Colors.grey,
-                                        child: TextField(
-                                          controller: userNameController,
-                                          obscureText: false,
-                                          textAlign: TextAlign.start,
-                                          maxLines: 1,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w400,
-                                            fontStyle: FontStyle.normal,
-                                            fontSize: 14,
-                                            color: Color(0xff000000),
-                                          ),
-                                          decoration: InputDecoration(
-                                            disabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15.0),
-                                              borderSide: BorderSide(
-                                                  color: Color(0x00000000),
-                                                  width: 1),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15.0),
-                                              borderSide: BorderSide(
-                                                  color: Color(0x00000000),
-                                                  width: 1),
-                                            ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(15.0),
-                                              borderSide: BorderSide(
-                                                  color: Color(0x00000000),
-                                                  width: 1),
-                                            ),
-                                            hintText: "Tài khoản",
-                                            hintStyle: TextStyle(
-                                              fontWeight: FontWeight.w400,
-                                              fontStyle: FontStyle.normal,
-                                              fontSize: 14,
-                                              color: Color(0xff989898),
-                                            ),
-                                            filled: true,
-                                            fillColor: Color(0xffFFFFFF),
-                                            isDense: false,
-                                            contentPadding: EdgeInsets.fromLTRB(
-                                                15, 20, 15, 20),
-                                          ),
-                                        ),
-                                      )),
+                                        borderSide: BorderSide(
+                                            color: Color(0x00000000), width: 1),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(15.0),
+                                        borderSide: BorderSide(
+                                            color: Color(0x00000000), width: 1),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(15.0),
+                                        borderSide: BorderSide(
+                                            color: Color(0x00000000), width: 1),
+                                      ),
+                                      hintText: "Tài khoản",
+                                      hintStyle: TextStyle(
+                                        fontWeight: FontWeight.w400,
+                                        fontStyle: FontStyle.normal,
+                                        fontSize: 14,
+                                        color: Color(0xff989898),
+                                      ),
+                                      filled: true,
+                                      fillColor: Color(0xffFFFFFF),
+                                      isDense: false,
+                                      contentPadding:
+                                          EdgeInsets.fromLTRB(15, 20, 15, 20),
+                                    ),
+                                  ),
+                                )),
                         Padding(
                             padding: EdgeInsets.symmetric(
                                 vertical: 10, horizontal: 20),
@@ -425,56 +404,68 @@ class _DangNhapWidgetState extends State<DangNhapWidget> {
                           mainAxisSize: MainAxisSize.max,
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
-                          Expanded(child: Padding(
-                          padding: EdgeInsets.fromLTRB(20, 20, 10, 0),
-                          child: MaterialButton(
-                            onPressed: () {
-                              if (username == null) {
-                                insertNewUser();
-                                _DangNhap(userNameController.text);
-                              } else {
-                                _DangNhap(username.toString());
-                              }
-                            },
-                            color: Color(0xFF4B2C20),
-                            elevation: 5,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(50.0),
-                              side: BorderSide(
-                                  color: Color(0xFF4B2C20), width: 1),
-                            ),
-                            child: Text(
-                              "Đăng nhập",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                                fontStyle: FontStyle.normal,
+                            Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(20, 20, 10, 0),
+                                child: MaterialButton(
+                                  onPressed: () {
+                                    if (username == null) {
+                                      insertNewUser();
+                                      _dangNhap(userNameController.text);
+                                    } else {
+                                      _dangNhap(username.toString());
+                                    }
+                                  },
+                                  color: Color(0xFF4B2C20),
+                                  elevation: 5,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(50.0),
+                                    side: BorderSide(
+                                        color: Color(0xFF4B2C20), width: 1),
+                                  ),
+                                  child: Text(
+                                    "Đăng nhập",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                      fontStyle: FontStyle.normal,
+                                    ),
+                                  ),
+                                  textColor: Color(0xffffffff),
+                                  height: 50,
+                                ),
                               ),
                             ),
-                            textColor: Color(0xffffffff),
-                            height: 50,
-                          ),
-                        ),),
-                        useCheck == true ? Padding(padding: EdgeInsets.fromLTRB(0, 20, 20, 0), 
-                        child: InkWell(onTap: (){
-                          authenticate();
-                        }, child: Material(
-                          elevation: 5,
-                          shadowColor: Colors.grey,
-                          borderRadius: BorderRadius.circular(50),
-                          child: Container(
-                          alignment: Alignment.center,
-                          height: 50,
-                          width: 50,
-                          decoration: BoxDecoration(
-                            color: Color(0xFF4B2C20),
-                            borderRadius: BorderRadius.circular(50)
-                          ),
-                          child: FaIcon(FontAwesomeIcons.fingerprint, color: Colors.white,),
-                        ),),)) : Container(),
-                        ],
+                            useCheck == true
+                                ? Padding(
+                                    padding: EdgeInsets.fromLTRB(0, 20, 20, 0),
+                                    child: InkWell(
+                                      onTap: () {
+                                        showBiometricDialog();
+                                      },
+                                      child: Material(
+                                        elevation: 5,
+                                        shadowColor: Colors.grey,
+                                        borderRadius: BorderRadius.circular(50),
+                                        child: Container(
+                                          alignment: Alignment.center,
+                                          height: 50,
+                                          width: 50,
+                                          decoration: BoxDecoration(
+                                              color: Color(0xFF4B2C20),
+                                              borderRadius:
+                                                  BorderRadius.circular(50)),
+                                          child: FaIcon(
+                                            FontAwesomeIcons.fingerprint,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ))
+                                : Container(),
+                          ],
                         ),
-                        
+
                         Padding(
                           padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
                           child: Text(
@@ -501,3 +492,4 @@ class _DangNhapWidgetState extends State<DangNhapWidget> {
     );
   }
 }
+

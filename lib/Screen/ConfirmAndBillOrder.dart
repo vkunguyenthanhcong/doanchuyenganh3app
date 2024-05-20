@@ -89,6 +89,22 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
   void setStateIfMounted(f) {
     if (mounted) setState(f);
   }
+  
+  _ThayDoiSoLuong(String id, String soluong) async {
+    final response =
+        await http.post(Uri.parse(url + "tableorder/addBill.php"), body: {
+        id : id, soluong : soluong
+    });
+    if (response.statusCode == 200) {
+      Map<String, dynamic> data = jsonDecode(response.body);
+      if (data['success'] == false) {
+        
+        
+      } else {}
+    } else {
+      
+    }
+  }
 
   _downloadAndSaveImage(
       String url,
@@ -274,6 +290,7 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
                                   style:
                                       pw.TextStyle(font: font, fontSize: 8))),
                         ),
+                        
                         pw.Padding(
                           padding: pw.EdgeInsets.symmetric(vertical: 5),
                           child: pw.Align(
@@ -456,9 +473,9 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
         setStateIfMounted(() {
           _giovao = data['time'];
           cacheGioVao = data['time'];
-          data['tongtien'] == null
+          (data['tongtien'].toString()) == null
               ? _tongTiened = "0"
-              : _tongTiened = data['tongtien'];
+              : _tongTiened = data['tongtien'].toString();
         });
       }
     } else {
@@ -470,14 +487,13 @@ class _ConfirmAndBillOrderState extends State<ConfirmAndBillOrder> {
     final response = await http.get(
         Uri.parse(url + "tableorder/getBill.php?id=${idban}&&tienChuaXacNhan"));
     if (response.statusCode == 200) {
-      var responseData = await response.body;
-
-      Map<String, dynamic> data = jsonDecode(responseData);
+      print(response.body);
+      Map<String, dynamic> data = jsonDecode(response.body);
 
       setStateIfMounted(() {
         data['tongtien'] == null
             ? (_tongtien = '0')
-            : (_tongtien = data['tongtien']);
+            : (_tongtien = data['tongtien'].toString());
       });
     } else {
       print('Failed');
@@ -639,13 +655,21 @@ class ChuaXacNhan extends StatelessWidget {
                         children: [
                           MaterialButton(
                             onPressed: () async {
-                              if (await confirm(context,
-                                  title: Text('Xác nhận'),
-                                  content: Text('Xác nhận order'),
-                                  textOK: Text('Xác nhận'),
-                                  textCancel: Text('Hủy'))) {
-                                xacNhan(idban);
-                              }
+                              QuickAlert.show(
+                                  context: context,
+                                  title: 'Xác Nhận',
+                                  type: QuickAlertType.confirm,
+                                  text: 'Xác nhận đơn hàng',
+                                  confirmBtnText: 'Yes',
+                                  cancelBtnText: 'No',
+                                  onCancelBtnTap: () {
+                                    Navigator.pop(context);
+                                  },
+                                  confirmBtnColor: Colors.green,
+                                  onConfirmBtnTap: () {
+                                    xacNhan(idban);
+                                    Navigator.pop(context);
+                                  });
                             },
                             color: Color(0xFF0059b3),
                             elevation: 5,
@@ -672,13 +696,21 @@ class ChuaXacNhan extends StatelessWidget {
                             padding: EdgeInsets.only(left: 25),
                             child: MaterialButton(
                               onPressed: () async {
-                                if (await confirm(context,
-                                    title: Text('Hủy'),
-                                    content: Text('Xác nhận hủy đơn hàng'),
-                                    textOK: Text('Xác nhận'),
-                                    textCancel: Text('Hủy'))) {
-                                  huyDon(idban);
-                                }
+                                QuickAlert.show(
+                                    context: context,
+                                    type: QuickAlertType.confirm,
+                                    title: 'Huỷ',
+                                    text: 'Xác nhận hủy đơn hàng',
+                                    confirmBtnText: 'Yes',
+                                    cancelBtnText: 'No',
+                                    onCancelBtnTap: () {
+                                      Navigator.pop(context);
+                                    },
+                                    confirmBtnColor: Colors.green,
+                                    onConfirmBtnTap: () {
+                                      huyDon(idban);
+                                      Navigator.pop(context);
+                                    });
                               },
                               color: Color(0xFFff5c33),
                               elevation: 5,
@@ -742,13 +774,17 @@ class ChuaXacNhan extends StatelessWidget {
                             ],
                             rows: _data.map((item) {
                               int index = _data.indexOf(item);
-                              _controllers[index].text = item['soluong'];
+                              _controllers[index].text = item['soluong'].toString();
                               return DataRow(
                                 cells: [
                                   DataCell(Container(
                                     width: 50,
                                     child: TextField(
+                                      keyboardType: TextInputType.number,
                                       controller: _controllers[index],
+                                      onChanged: (val){
+                                        val == "" ? print('0') : print(_controllers[index].text);
+                                      },
                                       obscureText: false,
                                       textAlign: TextAlign.center,
                                       maxLines: 1,
@@ -798,7 +834,7 @@ class ChuaXacNhan extends StatelessWidget {
                                     child: Container(
                                       width: 70,
                                       child: Text(convertToCurrencyFormat(
-                                              item['gia'].toString()) +
+                                              ((item['gia']) * (item['soluong'])).toString()) +
                                           ' đ'),
                                     ),
                                   )),
@@ -940,7 +976,7 @@ class DaXacNhan extends StatelessWidget {
                               alignment: Alignment.center,
                               child: Container(
                                 width: 25,
-                                child: Text(item['soluong'],
+                                child: Text(item['soluong'].toString(),
                                     textAlign: TextAlign.center),
                               ),
                             ),
@@ -951,8 +987,8 @@ class DaXacNhan extends StatelessWidget {
                               width: 65,
                               child: Text(
                                   (convertToCurrencyFormat(
-                                      (int.parse(item['soluong']) *
-                                              int.parse(item['gia']))
+                                      ((item['soluong']) *
+                                              (item['gia']))
                                           .toString())),
                                   textAlign: TextAlign.right),
                             ),
@@ -993,26 +1029,35 @@ class DaXacNhan extends StatelessWidget {
                     MaterialButton(
                       onPressed: () async {
                         if (_giovao != "") {
-                          if (await confirm(context,
-                              title: Text('Thanh toán'),
-                              content: Text('Xác nhận thanh toán'),
-                              textOK: Text('Thanh toán'),
-                              textCancel: Text('Hủy'))) {
-                            downloadAndSaveImage(
-                              'https://img.vietqr.io/image/tpbank-0935704083-qr_only.jpg?amount=${tongtienthanhtoan}&addInfo=${idHoaDon(convertDateTime(cacheGioVao.toString()), idban)}&accountName=NGUYEN%20THANH%20CONG',
-                              context,
-                              tongtienthanhtoan,
-                              idban,
-                              getGioRa(),
-                              datas,
-                            );
-                            thanhToan(
-                                idban,
-                                idHoaDon(
-                                    convertDateTime(_giovao.toString()), idban),
+                          QuickAlert.show(
+                            title: "Thanh toán",
+                            context: context,
+                            type: QuickAlertType.confirm,
+                            text: 'Xác nhận thanh toán',
+                            confirmBtnText: 'Yes',
+                            onConfirmBtnTap: () {
+                              downloadAndSaveImage(
+                                'https://img.vietqr.io/image/tpbank-0935704083-qr_only.jpg?amount=${tongtienthanhtoan}&addInfo=${idHoaDon(convertDateTime(cacheGioVao.toString()), idban)}&accountName=NGUYEN%20THANH%20CONG',
+                                context,
                                 tongtienthanhtoan,
-                                username);
-                          }
+                                idban,
+                                getGioRa(),
+                                datas,
+                              );
+                              thanhToan(
+                                  idban,
+                                  idHoaDon(convertDateTime(_giovao.toString()),
+                                      idban),
+                                  tongtienthanhtoan,
+                                  username);
+                              Navigator.pop(context);
+                            },
+                            cancelBtnText: 'No',
+                            onCancelBtnTap: () {
+                              Navigator.pop(context);
+                            },
+                            confirmBtnColor: Colors.green,
+                          );
                         }
                       },
                       color: Color(0xFF0059b3),

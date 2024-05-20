@@ -1,21 +1,25 @@
 <?php
 
 include '../connect.php';
-$idban = $_POST['idban'];
-$idhoadon = $_POST['idhoadon'];
-$tongtien = $_POST['tongtien'];
-$giovao = $_POST['giovao'];
-$nhanvien = $_POST['nhanvien'];
-$sql = "UPDATE bill SET idhoadon = '$idhoadon' , giora = now() WHERE idban = '$idban'";
+
+// Sử dụng hàm mysqli_real_escape_string để tránh tấn công SQL Injection
+$idban = mysqli_real_escape_string($conn, $_POST['idban']);
+$idhoadon = mysqli_real_escape_string($conn, $_POST['idhoadon']);
+$tongtien = mysqli_real_escape_string($conn, $_POST['tongtien']);
+$giovao = mysqli_real_escape_string($conn, $_POST['giovao']);
+$nhanvien = mysqli_real_escape_string($conn, $_POST['nhanvien']);
+
+$sql = "UPDATE bill SET idhoadon = '$idhoadon', giora = NOW() WHERE idban = '$idban'";
 $result = mysqli_query($conn, $sql);
-$sql_1 = "INSERT INTO hoadon (idhoadon, nhanvien, tongtien, giovao, giora, idban) VALUES ('$idhoadon', '$nhanvien', '$tongtien', '$giovao', now(), '$idban')";
+
+$sql_1 = "INSERT INTO hoadon (idhoadon, nhanvien, tongtien, giovao, giora, idban) 
+          VALUES ('$idhoadon', '$nhanvien', '$tongtien', '$giovao', NOW(), '$idban')";
 $result_1 = mysqli_query($conn, $sql_1);
-if($result && $result_1){
+
+if ($result && $result_1) {
     echo json_encode(array("success" => true));
-}else{
+} else {
     echo json_encode(array("success" => false));
 }
-
-
 
 ?>

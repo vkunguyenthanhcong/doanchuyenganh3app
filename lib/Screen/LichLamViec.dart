@@ -82,8 +82,8 @@ class _LichLamViecState extends State<LichLamViec> {
     super.initState();
     fetchCaLamViec(removeTime(dt.toString()));
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        fetchCaLamViec(removeTime(dt.toString()));
+      setStateIfMounted(() {
+        fetchCaLamViec(removeTime(_selectedDate.toString()));
       });
     });
   }

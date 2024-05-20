@@ -10,6 +10,7 @@ import 'package:quickalert/models/quickalert_type.dart';
 import 'package:quickalert/widgets/quickalert_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+
 class TableOrder {
   final String id;
   final String ten;
@@ -23,11 +24,13 @@ class TableOrder {
     required this.total_money,
   });
 }
+
 String convertToCurrencyFormat(String input) {
   final numberFormat = NumberFormat("#,##0.###", "vi_VN");
   final number = int.parse(input);
   return numberFormat.format(number);
 }
+
 class Order extends StatefulWidget {
   final String? username;
   const Order({Key? key, this.username}) : super(key: key);
@@ -46,7 +49,6 @@ class _OrderState extends State<Order> {
 
   @override
   void initState() {
-    
     super.initState();
     setStateIfMounted(() {
       isLoading = true;
@@ -55,11 +57,13 @@ class _OrderState extends State<Order> {
     setStateIfMounted(() {
       isLoading = false;
     });
-    Timer.periodic(Duration(seconds:5), (Timer t) => fetchTableOrder());
+    Timer.periodic(Duration(seconds: 5), (Timer t) => fetchTableOrder());
   }
-   void setStateIfMounted(f) {
+
+  void setStateIfMounted(f) {
     if (mounted) setState(f);
   }
+
   Future<void> _ThemKhuVuc(String _ten) async {
     if (!mounted) return;
     final Uri apiUrl = Uri.parse(url + "tableorder/getTableOrder.php");
@@ -72,15 +76,15 @@ class _OrderState extends State<Order> {
       String message = "";
       try {
         Map<String, dynamic> jsonData = json.decode(response.body);
-        
+
         if (jsonData['success'] == true) {
           Navigator.pop(context);
           fetchTableOrder();
-        }else{
-           QuickAlert.show(
-            context: context,
-            type: QuickAlertType.error,
-            text: "Khu Vực Đã Tồn Tại");
+        } else {
+          QuickAlert.show(
+              context: context,
+              type: QuickAlertType.error,
+              text: "Khu Vực Đã Tồn Tại");
         }
       } on Exception {
         QuickAlert.show(
@@ -96,31 +100,29 @@ class _OrderState extends State<Order> {
 
   Future<void> fetchTableOrder() async {
     bool success = false;
-    final response = await http.get(
-        Uri.parse(url + "tableorder/getTableOrder.php"));
+    final response =
+        await http.get(Uri.parse(url + "tableorder/getTableOrder.php"));
     if (response.statusCode == 200) {
       List<dynamic> jsonData = json.decode(response.body);
-      for (var item in jsonData){
+      for (var item in jsonData) {
         setStateIfMounted(() {
           success = item['success'] ?? true;
         });
       }
       if (success == false) {
-        
-      }else{
+      } else {
         List<dynamic> data = jsonDecode(response.body);
-      setStateIfMounted(() {
-        _tableorder = data
-            .map((item) => TableOrder(
-                  id: item['id'],
-                  ten: item['ten'],
-                  tinhtrang: item['tinhtrang'],
-                  total_money: item['total_money'] ?? '0',
-                ))
-            .toList();
-      });
+        setStateIfMounted(() {
+          _tableorder = data
+              .map((item) => TableOrder(
+                    id: item['id'],
+                    ten: item['ten'],
+                    tinhtrang: item['tinhtrang'],
+                    total_money: item['total_money'].toString() ?? '0',
+                  ))
+              .toList();
+        });
       }
-      
     } else {
       showDialog(
         context: context,
@@ -309,8 +311,11 @@ class _OrderState extends State<Order> {
                 for (final to in _tableorder)
                   InkWell(
                     onTap: () async {
-                      Navigator.pushNamed(context, '/addOrder',
-                          arguments: {'ten': to.ten, 'idban': to.id, 'username' : username});
+                      Navigator.pushNamed(context, '/addOrder', arguments: {
+                        'ten': to.ten,
+                        'idban': to.id,
+                        'username': username
+                      });
                     },
                     child: Material(
                       elevation: 5,

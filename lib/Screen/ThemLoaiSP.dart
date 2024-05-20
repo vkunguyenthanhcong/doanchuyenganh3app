@@ -74,7 +74,7 @@ class _ThemLoaiSPState extends State<ThemLoaiSP> {
       setStateIfMounted(() {
         _typeProducts = data
             .map((item) => TypeProduct(
-                  id: item['id'],
+                  id: item['id'].toString(),
                   tenloai: item['tenloai'],
                 ))
             .toList();

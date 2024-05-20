@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:coffee_manager/global.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:quickalert/models/quickalert_type.dart';
+import 'package:quickalert/widgets/quickalert_dialog.dart';
 
 class Product {
   final String id;
@@ -49,34 +51,47 @@ class _KhoState extends State<Kho> {
     if (mounted) setState(f);
   }
 
+  Future<void> deleteProduct(String id) async {
+    final response =
+        await http.delete(Uri.parse(url + "product/products.php?id=$id"));
+    if (response.statusCode == 200) {
+      Map<String, dynamic> data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        fetchProducts();
+        QuickAlert.show(
+            context: context,
+            type: QuickAlertType.success,
+            text: "Xoá thành công");
+      }
+    }
+  }
+
   Future<void> fetchProducts() async {
     bool success = false;
     final response = await http.get(Uri.parse(url + "product/products.php"));
-    
+
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
-      for (var item in data){
+      for (var item in data) {
         setStateIfMounted(() {
           success = item['success'] ?? true;
         });
       }
       if (success == false) {
-        
-      }else{
+      } else {
         setStateIfMounted(() {
-        _products = data
-            .map((item) => Product(
-                  id: item['id'],
-                  ten: item['ten'],
-                  image: item['image'],
-                  gia: item['gia'],
-                  loai: item['loai'],
-                  soluong: item['soluong'],
-                ))
-            .toList();
-      });
+          _products = data
+              .map((item) => Product(
+                    id: item['id'],
+                    ten: item['ten'],
+                    image: item['image'],
+                    gia: item['gia'],
+                    loai: item['loai'],
+                    soluong: item['soluong'],
+                  ))
+              .toList();
+        });
       }
-      
     } else {
       showDialog(
         context: context,
@@ -301,14 +316,34 @@ class _KhoState extends State<Kho> {
                         size: 24,
                       ),
                     ),
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(0, 0, 20, 0),
-                      child: Icon(
-                        Icons.delete,
-                        color: Color(0xff212435),
-                        size: 24,
+                    InkWell(
+                      onTap: () {
+                        QuickAlert.show(
+                          title: "Xoá sản phẩm",
+                          context: context,
+                          type: QuickAlertType.confirm,
+                          text: 'Xác nhận xoá',
+                          confirmBtnText: 'Yes',
+                          onConfirmBtnTap: () {
+                            deleteProduct(product.id);
+                            Navigator.pop(context);
+                          },
+                          cancelBtnText: 'No',
+                          onCancelBtnTap: () {
+                            Navigator.pop(context);
+                          },
+                          confirmBtnColor: Colors.green,
+                        );
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(0, 0, 20, 0),
+                        child: Icon(
+                          Icons.delete,
+                          color: Color(0xff212435),
+                          size: 24,
+                        ),
                       ),
-                    ),
+                    )
                   ],
                 ),
               ),
